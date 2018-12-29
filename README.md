@@ -1,6 +1,10 @@
 # PBDRKbrain
 prior-based deformable brain registration to the kirby template
 
+Data can be downloaded from : 
+
+[https://figshare.com/articles/antsrnetpriorreg/7531625](https://figshare.com/articles/antsrnetpriorreg/7531625)
+
 Register brain data to the symmetric kirby template
 
 the input image should already be affine transformed to the template
