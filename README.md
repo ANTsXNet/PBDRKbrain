@@ -9,7 +9,10 @@ Register brain data to the symmetric kirby template
 
 the input image should already be affine transformed to the template
 
-if you run Rscript Scripts/PBDRKbrainModelPredict.R image.nii.gz /tmp/ARSE
+if you run Rscript Scripts/PBDRKbrainModelPredict.R image.nii.gz /tmp/ARSE optional-doAff
+
+doAff will run an affine registration internally
+
 the script will output:
 
 * /tmp/ARSElearned.nii.gz  - transformed image
