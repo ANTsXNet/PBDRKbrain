@@ -24,7 +24,7 @@ print( paste( "input:", inputFileName, "outputPre:", outputFileName,
 rdir = "./"
 template = antsImageRead( paste0( rdir, "Data/S_template3_BrainCerebellum.nii.gz"))
 normimg <-function( img ) {
-  resampleImage( img, 2  ) %>%
+  resampleImage( img, c(128,128,128), useVoxels=T ) %>%
     n3BiasFieldCorrection( 2 ) %>%
     iMath(  'TruncateIntensity', 0.01, 0.98 ) %>%
     iMath("Normalize" ) %>%
@@ -37,7 +37,7 @@ nzimg <- function( img, nzlevel = 0.01 ) {
 }
 
 normimg1 <-function( img ) {
-  resampleImage( img, 2  ) %>%
+  resampleImage( img, c(128,128,128), useVoxels=T  ) %>%
     iMath(  'TruncateIntensity', 0.01, 0.98 ) %>%
     n3BiasFieldCorrection( 2 ) %>%
     iMath("Normalize" )
@@ -46,18 +46,19 @@ normimg1 <-function( img ) {
 regressionModel = load_model_hdf5( "./Data/PBDRKbrainModel.h5" )
 
 # efficient prediction
-basisMatrixFN = "Data/warpBasis_matrix.mha"
-basisMat = as.matrix( antsImageRead( basisMatrixFN ) )
-warpmask = antsImageRead( "Data/warpBasis_mask.nii.gz" )
+# basisMatrixFN = "Data/warpBasis_matrix.mha"
+# basisMat = as.matrix( antsImageRead( basisMatrixFN ) )
+# warpmask = antsImageRead( "Data/warpBasis_mask.nii.gz" )
 #################################################################
 refB = normimg( template )
+warpmask = refB * 0 + 1
 ncomp = 1
 sumMI = 0
 print("Begin Transform Estimate")
 t1=Sys.time()
 wts = c( 0.5, 0.25, 0.13, 0.05, 0.05, 0.05, 0.05, 0.05 )
 wts = c( 0.9, 0.05, 0.025 )
-wts = c( 1 )
+wts = c( 1  )
 for ( comp in 1:length(wts)) {
     if ( comp == 1 ) {
       affimg = antsImageRead( inputFileName )
@@ -71,11 +72,13 @@ for ( comp in 1:length(wts)) {
       }
     if ( comp == 1 ) aa = antsImageClone( affimg )
     temp = normimg( aa )
-    temp = temp + nzimg( temp )
-    xshape = c( 1, dim(temp), 1 )
-    newp = predict(regressionModel, array( as.array(temp), dim = xshape ) )
-    predVecs2 = basisMat %*% t( newp )
-    totalWarpB2 = vectorToMultichannel( predVecs2, warpmask )
+    xshape = c( 1, dim(temp), 2 )
+    myarr = array( dim = xshape )
+    myarr[1,,,,1] = as.array( temp )
+    myarr[1,,,,2] = as.array( refB )
+    newp = predict(regressionModel, myarr )
+#    predVecs2 = basisMat %*% t( newp )
+    totalWarpB2 = resampleImage( vectorToMultichannel( newp, warpmask ), dim(template), useVoxels=T )
     wt = wts[comp]
     tx = paste0( outputFileName,(1:comp)+10, 'learnedWarp.nii.gz' )
     antsImageWrite( totalWarpB2*wt, paste0( outputFileName,comp+10,'learnedWarp.nii.gz' ) )
